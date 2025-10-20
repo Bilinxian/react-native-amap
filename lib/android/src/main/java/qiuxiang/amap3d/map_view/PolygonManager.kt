@@ -1,14 +1,19 @@
 package qiuxiang.amap3d.map_view
 
+import com.amap.api.maps.model.LatLng
 import com.facebook.react.bridge.ReadableArray
-import com.facebook.react.uimanager.SimpleViewManager
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.uimanager.ThemedReactContext
+import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
-import qiuxiang.amap3d.toLatLngList
-import qiuxiang.amap3d.toPx
+import qiuxiang.amap3d.getEventTypeConstants
+import qiuxiang.amap3d.toLatLng
 
-@Suppress("unused")
-internal class PolygonManager : SimpleViewManager<Polygon>() {
+/**
+ * 多边形管理器
+ * 支持新架构（Fabric）和旧架构
+ */
+internal class PolygonManager : ViewGroupManager<Polygon>() {
   override fun getName(): String {
     return "AMapPolygon"
   }
@@ -17,28 +22,36 @@ internal class PolygonManager : SimpleViewManager<Polygon>() {
     return Polygon(reactContext)
   }
 
-  @ReactProp(name = "points")
-  fun setPoints(polygon: Polygon, points: ReadableArray) {
-    polygon.points = points.toLatLngList()
+  override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
+    return getEventTypeConstants("onPress")
   }
 
-  @ReactProp(name = "fillColor", customType = "Color")
-  fun setFillColor(polygon: Polygon, fillColor: Int) {
-    polygon.fillColor = fillColor
-  }
-
-  @ReactProp(name = "strokeColor", customType = "Color")
-  fun setStrokeColor(polygon: Polygon, strokeColor: Int) {
-    polygon.strokeColor = strokeColor
+  @ReactProp(name = "coordinates")
+  fun setCoordinates(view: Polygon, coordinates: ReadableArray) {
+    val points = mutableListOf<LatLng>()
+    for (i in 0 until coordinates.size()) {
+      points.add(coordinates.getMap(i).toLatLng())
+    }
+    view.setPoints(points)
   }
 
   @ReactProp(name = "strokeWidth")
-  fun setStrokeWidth(polygon: Polygon, strokeWidth: Float) {
-    polygon.strokeWidth = strokeWidth.toPx().toFloat()
+  fun setStrokeWidth(view: Polygon, strokeWidth: Float) {
+    view.setStrokeWidth(strokeWidth)
+  }
+
+  @ReactProp(name = "strokeColor")
+  fun setStrokeColor(view: Polygon, strokeColor: Int) {
+    view.setStrokeColor(strokeColor)
+  }
+
+  @ReactProp(name = "fillColor")
+  fun setFillColor(view: Polygon, fillColor: Int) {
+    view.setFillColor(fillColor)
   }
 
   @ReactProp(name = "zIndex")
-  fun setIndex(polygon: Polygon, zIndex: Float) {
-    polygon.zIndex = zIndex
+  fun setZIndex(view: Polygon, zIndex: Float) {
+    view.setZIndex(zIndex)
   }
 }

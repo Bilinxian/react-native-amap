@@ -1,64 +1,77 @@
 package qiuxiang.amap3d.map_view
 
+import android.graphics.Color
+import com.amap.api.maps.model.LatLng
 import com.facebook.react.bridge.ReadableArray
-import com.facebook.react.uimanager.SimpleViewManager
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.uimanager.ThemedReactContext
+import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
 import qiuxiang.amap3d.getEventTypeConstants
-import qiuxiang.amap3d.toLatLngList
-import qiuxiang.amap3d.toPx
+import qiuxiang.amap3d.toLatLng
 
-@Suppress("unused")
-internal class PolylineManager : SimpleViewManager<Polyline>() {
+/**
+ * 折线管理器
+ * 支持新架构（Fabric）和旧架构
+ */
+internal class PolylineManager : ViewGroupManager<Polyline>() {
   override fun getName(): String {
     return "AMapPolyline"
   }
 
-  override fun createViewInstance(context: ThemedReactContext): Polyline {
-    return Polyline(context)
+  override fun createViewInstance(reactContext: ThemedReactContext): Polyline {
+    return Polyline(reactContext)
   }
 
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
     return getEventTypeConstants("onPress")
   }
 
-  @ReactProp(name = "points")
-  fun setPoints(polyline: Polyline, points: ReadableArray) {
-    polyline.points = points.toLatLngList()
+  @ReactProp(name = "coordinates")
+  fun setCoordinates(view: Polyline, coordinates: ReadableArray) {
+    val points = mutableListOf<LatLng>()
+    for (i in 0 until coordinates.size()) {
+      points.add(coordinates.getMap(i).toLatLng())
+    }
+    view.setPoints(points)
+  }
+
+  @ReactProp(name = "strokeWidth")
+  fun setStrokeWidth(view: Polyline, strokeWidth: Float) {
+    view.setWidth(strokeWidth)
+  }
+
+  @ReactProp(name = "strokeColor")
+  fun setStrokeColor(view: Polyline, strokeColor: Int) {
+    view.setColor(strokeColor)
   }
 
   @ReactProp(name = "colors")
-  fun setColors(polyline: Polyline, colors: ReadableArray) {
-    polyline.colors = (0 until colors.size()).map { colors.getInt(it) }
-  }
-
-  @ReactProp(name = "color", customType = "Color")
-  fun setColor(polyline: Polyline, color: Int) {
-    polyline.color = color
-  }
-
-  @ReactProp(name = "width")
-  fun setWidth(polyline: Polyline, width: Float) {
-    polyline.width = width.toPx().toFloat()
-  }
-
-  @ReactProp(name = "zIndex")
-  fun setIndex(polyline: Polyline, zIndex: Float) {
-    polyline.zIndex = zIndex
-  }
-
-  @ReactProp(name = "geodesic")
-  fun setGeodesic(polyline: Polyline, geodesic: Boolean) {
-    polyline.geodesic = geodesic
+  fun setColors(view: Polyline, colors: ReadableArray) {
+    val colorList = mutableListOf<Int>()
+    for (i in 0 until colors.size()) {
+      colorList.add(colors.getInt(i))
+    }
+    view.setColors(colorList)
   }
 
   @ReactProp(name = "dashed")
-  fun setDashed(polyline: Polyline, dashed: Boolean) {
-    polyline.dashed = dashed
+  fun setDashed(view: Polyline, dashed: Boolean) {
+    view.setDashed(dashed)
   }
 
   @ReactProp(name = "gradient")
-  fun setGradient(polyline: Polyline, gradient: Boolean) {
-    polyline.gradient = gradient
+  fun setGradient(view: Polyline, gradient: Boolean) {
+    view.setGradient(gradient)
+  }
+
+  @ReactProp(name = "geodesic")
+  fun setGeodesic(view: Polyline, geodesic: Boolean) {
+    view.setGeodesic(geodesic)
+  }
+
+  @ReactProp(name = "zIndex")
+  fun setZIndex(view: Polyline, zIndex: Float) {
+    view.setZIndex(zIndex)
   }
 }

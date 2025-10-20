@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import Component from "./component";
 import { CameraPosition, LatLng, LatLngBounds, MapPoi, MapType, Point } from "./types";
+import NativeAMapView from "./NativeAMapView";
 
 export interface CameraEvent {
   cameraPosition: CameraPosition;
@@ -154,7 +155,7 @@ export interface MapViewProps extends ViewProps {
 }
 
 const name = "AMapView";
-const NativeMapView = requireNativeComponent<MapViewProps>(name);
+const NativeMapView = NativeAMapView;
 
 export default class extends Component<MapViewProps> {
   static defaultProps = {

@@ -10,6 +10,7 @@ import {
 import resolveAssetSource from "react-native/Libraries/Image/resolveAssetSource";
 import Component from "./component";
 import { LatLng, Point } from "./types";
+import NativeAMapMarker from "./NativeAMapMarker";
 
 export interface MarkerProps {
   /**
@@ -125,4 +126,4 @@ export default class extends Component<MarkerProps> {
 
 const name = "AMapMarker";
 const style: ViewStyle = { position: "absolute", zIndex: -1 };
-const NativeMarker = requireNativeComponent<MarkerProps>(name);
+const NativeMarker = NativeAMapMarker;
