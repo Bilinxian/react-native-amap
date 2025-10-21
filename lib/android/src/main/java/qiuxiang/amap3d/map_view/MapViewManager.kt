@@ -10,10 +10,6 @@ import com.facebook.react.uimanager.annotations.ReactProp
 import qiuxiang.amap3d.getEventTypeConstants
 import qiuxiang.amap3d.toLatLng
 
-/**
- * 高德地图视图管理器
- * 支持新架构（Fabric）和旧架构
- */
 @Suppress("unused")
 internal class MapViewManager : ViewGroupManager<MapView>() {
   private val commands = mapOf(

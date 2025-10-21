@@ -1,7 +1,6 @@
 import * as React from "react";
 import { ColorValue, Platform, processColor, requireNativeComponent } from "react-native";
 import { LatLng } from "./types";
-import NativeAMapPolyline from "./NativeAMapPolyline";
 
 export interface PolylineProps {
   /**
@@ -63,4 +62,4 @@ export default class extends React.PureComponent<PolylineProps> {
   }
 }
 
-const NativePolyline = NativeAMapPolyline;
+const NativePolyline = requireNativeComponent<PolylineProps>("AMapPolyline");

@@ -1,7 +1,5 @@
 # react-native-amap3d [![][version-badge]][npm] [![](https://github.com/qiuxiang/react-native-amap3d/actions/workflows/build.yml/badge.svg)](https://github.com/qiuxiang/react-native-amap3d/actions/workflows/build.yml)
 
-**🎉 现已支持 React Native 0.80.2 新架构（Fabric/TurboModule）！**
-
 **注意：该项目目前只维护，不加新功能。**
 
 react-native 高德地图组件，使用最新 3D SDK，支持 Android + iOS，受 [react-native-maps](https://github.com/airbnb/react-native-maps) 启发，提供功能丰富且易用的接口。
@@ -36,23 +34,6 @@ https://qiuxiang.github.io/react-native-amap3d/api/
 ```bash
 npm i react-native-amap3d
 ```
-
-### 新架构支持
-
-本项目现已完全支持 React Native 新架构（Fabric/TurboModule），包括：
-
-- ✅ Fabric 渲染引擎支持
-- ✅ TurboModule 支持
-- ✅ CodeGen 代码生成
-- ✅ 类型安全的 JavaScript 接口
-
-要启用新架构，请确保：
-
-1. 使用 React Native 0.80.2 或更高版本
-2. 在 `android/gradle.properties` 中设置 `newArchEnabled=true`
-3. 运行 `cd android && ./gradlew generateCodegenArtifactsFromSchema` 生成代码
-
-详细升级指南请参考 [NEW_ARCH_MIGRATION_GUIDE.md](./NEW_ARCH_MIGRATION_GUIDE.md) 和 [QUICK_START.md](./QUICK_START.md)。
 
 ### 添加高德 API Key
 
@@ -199,17 +180,6 @@ const markers = Array(1000)
 
 - 尽量使用真实设备进行测试，在模拟器可能存在一些问题（常见的是 Android 模拟器因为缺少 GPU 加速而导致闪退）。
 - onLocation 没有返回定位数据通常是因为 key 不正确，或没有申请 PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION 权限
-
-### 新架构相关问题
-
-**Q: 如何确认新架构是否启用成功？**
-A: 运行应用时查看 Metro 日志，如果看到 "Fabric" 相关输出，说明新架构已启用。也可以在 Android Studio 的 Logcat 中搜索 "FabricUIManager" 验证。
-
-**Q: 新架构和旧架构可以共存吗？**
-A: 是的，本项目同时支持新旧架构。新架构通过 CodeGen 生成代码，旧架构通过传统的桥接方式工作。
-
-**Q: 升级到新架构后遇到编译错误怎么办？**
-A: 首先确保清理构建缓存：`cd android && ./gradlew clean`，然后重新生成 CodeGen 代码：`./gradlew generateCodegenArtifactsFromSchema`。
 
 [npm]: https://www.npmjs.com/package/react-native-amap3d
 [version-badge]: https://img.shields.io/npm/v/react-native-amap3d.svg

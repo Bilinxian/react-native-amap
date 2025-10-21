@@ -7,10 +7,6 @@ import com.facebook.react.uimanager.ViewManager
 import qiuxiang.amap3d.map_view.*
 import qiuxiang.amap3d.modules.SdkModule
 
-/**
- * 高德地图React Native包
- * 支持新架构（Fabric/TurboModule）和旧架构
- */
 class AMap3DPackage : ReactPackage {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
     return listOf(
