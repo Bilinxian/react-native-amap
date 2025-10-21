@@ -7,18 +7,21 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
-import qiuxiang.amap3d.getEventTypeConstants
 import qiuxiang.amap3d.toLatLng
 
 @Suppress("unused")
 internal class MapViewManager : ViewGroupManager<MapView>() {
-  private val commands = mapOf(
-    "moveCamera" to { view: MapView, args: ReadableArray? -> view.moveCamera(args) },
-    "call" to { view: MapView, args: ReadableArray? -> view.call(args) },
-  )
+
+  companion object {
+    private const val REACT_CLASS = "AMapView"
+
+    // 命令常量
+    private const val COMMAND_MOVE_CAMERA = 1
+    private const val COMMAND_CALL = 2
+  }
 
   override fun getName(): String {
-    return "AMapView"
+    return REACT_CLASS
   }
 
   override fun createViewInstance(reactContext: ThemedReactContext): MapView {
@@ -26,41 +29,65 @@ internal class MapViewManager : ViewGroupManager<MapView>() {
   }
 
   override fun onDropViewInstance(view: MapView) {
-    super.onDropViewInstance(view)
     view.onDestroy()
+    super.onDropViewInstance(view)
   }
 
-  override fun getCommandsMap(): Map<String, Int> {
-    return commands.keys.mapIndexed { index, key -> key to index }.toMap()
-  }
-
-  override fun receiveCommand(view: MapView, command: Int, args: ReadableArray?) {
-    commands.values.toList()[command](view, args)
-  }
-
-  override fun addView(mapView: MapView, child: View, index: Int) {
-    mapView.add(child)
-    super.addView(mapView, child, index)
-  }
-
-  override fun removeViewAt(parent: MapView, index: Int) {
-    parent.remove(parent.getChildAt(index))
-    super.removeViewAt(parent, index)
-  }
-
-  override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
-    return getEventTypeConstants(
-      "onLoad",
-      "onPress",
-      "onPressPoi",
-      "onLongPress",
-      "onCameraMove",
-      "onCameraIdle",
-      "onLocation",
-      "onCallback",
+  override fun getExportedCustomDirectEventTypeConstants(): MutableMap<String, Any> {
+    return mutableMapOf(
+      "onLoad" to mutableMapOf("registrationName" to "onLoad"),
+      "onPress" to mutableMapOf("registrationName" to "onPress"),
+      "onPressPoi" to mutableMapOf("registrationName" to "onPressPoi"),
+      "onLongPress" to mutableMapOf("registrationName" to "onLongPress"),
+      "onCameraMove" to mutableMapOf("registrationName" to "onCameraMove"),
+      "onCameraIdle" to mutableMapOf("registrationName" to "onCameraIdle"),
+      "onLocation" to mutableMapOf("registrationName" to "onLocation"),
+      "onCallback" to mutableMapOf("registrationName" to "onCallback"),
+      "onDragStart" to mutableMapOf("registrationName" to "onDragStart"),
+      "onDrag" to mutableMapOf("registrationName" to "onDrag"),
+      "onDragEnd" to mutableMapOf("registrationName" to "onDragEnd")
     )
   }
 
+  override fun getCommandsMap(): MutableMap<String, Int> {
+    return mutableMapOf(
+      "moveCamera" to COMMAND_MOVE_CAMERA,
+      "call" to COMMAND_CALL
+    )
+  }
+
+  override fun receiveCommand(root: MapView, commandId: Int, args: ReadableArray?) {
+    when (commandId) {
+      COMMAND_MOVE_CAMERA -> root.moveCamera(args)
+      COMMAND_CALL -> root.call(args)
+    }
+  }
+
+  override fun receiveCommand(root: MapView, commandId: String, args: ReadableArray?) {
+    when (commandId) {
+      "moveCamera" -> root.moveCamera(args)
+      "call" -> root.call(args)
+    }
+  }
+
+  override fun addView(parent: MapView, child: View, index: Int) {
+    parent.add(child)
+  }
+
+  override fun removeViewAt(parent: MapView, index: Int) {
+    val child = parent.getChildAt(index)
+    parent.remove(child)
+  }
+
+  override fun getChildCount(parent: MapView): Int {
+    return parent.childCount
+  }
+
+  override fun getChildAt(parent: MapView, index: Int): View {
+    return parent.getChildAt(index)
+  }
+
+  // React Props
   @ReactProp(name = "initialCameraPosition")
   fun setInitialCameraPosition(view: MapView, position: ReadableMap) {
     view.setInitialCameraPosition(position)

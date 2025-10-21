@@ -1,6 +1,7 @@
 package qiuxiang.amap3d.map_view
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.view.View
 import com.amap.api.maps.AMap
 import com.amap.api.maps.CameraUpdateFactory
@@ -13,6 +14,7 @@ import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.uimanager.ThemedReactContext
+import com.facebook.react.uimanager.events.RCTEventEmitter
 import qiuxiang.amap3d.getFloat
 import qiuxiang.amap3d.toJson
 import qiuxiang.amap3d.toLatLng
@@ -20,13 +22,17 @@ import qiuxiang.amap3d.toPoint
 
 @SuppressLint("ViewConstructor")
 class MapView(context: ThemedReactContext) : TextureMapView(context) {
-  @Suppress("Deprecation")
-  private val eventEmitter =
-    context.getJSModule(com.facebook.react.uimanager.events.RCTEventEmitter::class.java)
   private val markerMap = HashMap<String, qiuxiang.amap3d.map_view.Marker>()
   private val polylineMap = HashMap<String, Polyline>()
   private var initialCameraPosition: ReadableMap? = null
   private var locationStyle: MyLocationStyle
+
+  // Fabric 事件发射器
+  private val eventEmitter: RCTEventEmitter?
+    get() {
+      val reactContext = context as? ThemedReactContext
+      return reactContext?.getJSModule(RCTEventEmitter::class.java)
+    }
 
   init {
     super.onCreate(null)
@@ -35,6 +41,10 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
     locationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
     map.myLocationStyle = locationStyle
 
+    setupMapListeners()
+  }
+
+  private fun setupMapListeners() {
     map.setOnMapLoadedListener { emit(id, "onLoad") }
     map.setOnMapClickListener { latLng -> emit(id, "onPress", latLng.toJson()) }
     map.setOnPOIClickListener { poi -> emit(id, "onPressPoi", poi.toJson()) }
@@ -77,36 +87,43 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
     })
 
     map.setOnMultiPointClickListener { item ->
-      item.customerId.split("_").let {
-        emit(
-          it[0].toInt(),
-          "onPress",
-          Arguments.createMap().apply { putInt("index", it[1].toInt()) },
-        )
+      item.customerId?.split("_")?.let {
+        if (it.size >= 2) {
+          emit(
+            it[0].toInt(),
+            "onPress",
+            Arguments.createMap().apply { putInt("index", it[1].toInt()) },
+          )
+        }
       }
       false
     }
 
-    map.setOnMyLocationChangeListener {
-      if (it.time > 0) {
-        emit(id, "onLocation", it.toJson())
+    map.setOnMyLocationChangeListener { location ->
+      if (location.time > 0) {
+        emit(id, "onLocation", location.toJson())
       }
     }
   }
 
-  fun emit(id: Int?, event: String, data: WritableMap = Arguments.createMap()) {
-    @Suppress("Deprecation")
-    id?.let { eventEmitter.receiveEvent(it, event, data) }
+  fun emit(viewId: Int?, event: String, data: WritableMap = Arguments.createMap()) {
+    viewId?.let { id ->
+      eventEmitter?.receiveEvent(id, event, data)
+    }
   }
 
   fun add(child: View) {
     if (child is Overlay) {
       child.add(map)
       if (child is qiuxiang.amap3d.map_view.Marker) {
-        markerMap[child.marker?.id!!] = child
+        child.marker?.id?.let { markerId ->
+          markerMap[markerId] = child
+        }
       }
       if (child is Polyline) {
-        polylineMap[child.polyline?.id!!] = child
+        child.polyline?.id?.let { polylineId ->
+          polylineMap[polylineId] = child
+        }
       }
     }
   }
@@ -115,10 +132,14 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
     if (child is Overlay) {
       child.remove()
       if (child is qiuxiang.amap3d.map_view.Marker) {
-        markerMap.remove(child.marker?.id)
+        child.marker?.id?.let { markerId ->
+          markerMap.remove(markerId)
+        }
       }
       if (child is Polyline) {
-        polylineMap.remove(child.polyline?.id)
+        child.polyline?.id?.let { polylineId ->
+          polylineMap.remove(polylineId)
+        }
       }
     }
   }
@@ -130,15 +151,18 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
 
   fun moveCamera(args: ReadableArray?) {
     val current = map.cameraPosition
-    val position = args?.getMap(0)!!
-    val target = position.getMap("target")?.toLatLng() ?: current.target
-    val zoom = position.getFloat("zoom") ?: current.zoom
-    val tilt = position.getFloat("tilt") ?: current.tilt
-    val bearing = position.getFloat("bearing") ?: current.bearing
-    val cameraUpdate = CameraUpdateFactory.newCameraPosition(
-      CameraPosition(target, zoom, tilt, bearing)
-    )
-    map.animateCamera(cameraUpdate, args.getInt(1).toLong(), animateCallback)
+    val position = args?.getMap(0)
+    position?.let {
+      val target = it.getMap("target")?.toLatLng() ?: current.target
+      val zoom = it.getFloat("zoom") ?: current.zoom
+      val tilt = it.getFloat("tilt") ?: current.tilt
+      val bearing = it.getFloat("bearing") ?: current.bearing
+      val cameraUpdate = CameraUpdateFactory.newCameraPosition(
+        CameraPosition(target, zoom, tilt, bearing)
+      )
+      val duration = args.getInt(1).toLong()
+      map.animateCamera(cameraUpdate, duration, animateCallback)
+    }
   }
 
   fun setInitialCameraPosition(position: ReadableMap) {
@@ -152,23 +176,44 @@ class MapView(context: ThemedReactContext) : TextureMapView(context) {
   }
 
   fun call(args: ReadableArray?) {
-    val id = args?.getDouble(0)!!
-    when (args.getString(1)) {
-      "getLatLng" -> callback(
-        id,
-        // @todo 暂时兼容 0.63
-        @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
-        map.projection.fromScreenLocation(args.getMap(2)!!.toPoint()).toJson()
-      )
+    val callbackId = args?.getDouble(0)
+    val method = args?.getString(1)
+
+    if (callbackId != null && method == "getLatLng") {
+      val pointMap = args.getMap(2)
+      pointMap?.let {
+        val point = it.toPoint()
+        val latLng = map.projection.fromScreenLocation(point)
+        callback(callbackId, latLng.toJson())
+      }
     }
   }
 
-  private fun callback(id: Double, data: Any) {
+  private fun callback(id: Double, data: WritableMap) {
     emit(this.id, "onCallback", Arguments.createMap().apply {
       putDouble("id", id)
-      when (data) {
-        is WritableMap -> putMap("data", data)
-      }
+      putMap("data", data)
     })
+  }
+
+  // Fabric 生命周期方法
+  override fun onStart() {
+    super.onStart()
+  }
+
+  override fun onResume() {
+    super.onResume()
+  }
+
+  override fun onPause() {
+    super.onPause()
+  }
+
+  override fun onStop() {
+    super.onStop()
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
   }
 }

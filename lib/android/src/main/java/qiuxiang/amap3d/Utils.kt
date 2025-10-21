@@ -34,9 +34,14 @@ fun ReadableMap.toLatLng(): LatLng {
 
 fun ReadableArray.toLatLngList(): List<LatLng> {
   return (0 until size()).map {
-    // @todo 暂时兼容 0.63
-    @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
-    getMap(it)!!.toLatLng()
+    // 新架构中需要使用 getMap 的安全调用
+    val map = getMap(it)
+    if (map != null) {
+      map.toLatLng()
+    } else {
+      // 处理空值情况，返回默认值或抛出异常
+      LatLng(0.0, 0.0)
+    }
   }
 }
 
@@ -70,10 +75,11 @@ fun Location.toJson(): WritableMap {
     putMap("coords", Arguments.createMap().apply {
       putDouble("latitude", latitude)
       putDouble("longitude", longitude)
-      putDouble("latitude", latitude)
       putDouble("accuracy", accuracy.toDouble())
       putDouble("heading", bearing.toDouble())
       putDouble("speed", speed.toDouble())
+      // 新架构可能需要更多字段
+      putDouble("altitude", altitude.toDouble())
     })
   }
 }
@@ -90,12 +96,38 @@ fun ReadableMap.getFloat(key: String): Float? {
   return null
 }
 
+// 新架构中的事件注册方式已改变
+// 这个函数在新架构中可能不再需要，或者需要重新实现
+@Deprecated("新架构中使用不同的事件系统", ReplaceWith(""))
 fun getEventTypeConstants(vararg list: String): Map<String, Any> {
   return list.associateWith { mapOf("phasedRegistrationNames" to mapOf("bubbled" to it)) }
 }
 
+// 为 Fabric 架构添加新的扩展函数
+fun ReadableMap.toLatLngBounds(): LatLngBounds {
+  val southwest = getMap("southwest")!!.toLatLng()
+  val northeast = getMap("northeast")!!.toLatLng()
+  return LatLngBounds(southwest, northeast)
+}
+
+fun ReadableMap.toCameraPosition(): CameraPosition {
+  return CameraPosition.Builder().apply {
+    target(getMap("target")!!.toLatLng())
+    getDouble("zoom").toFloat().let { if (it > 0) zoom(it) }
+    getDouble("tilt").toFloat().let { if (it > 0) tilt(it) }
+    getDouble("bearing").toFloat().let { if (it > 0) bearing(it) }
+  }.build()
+}
+
+// 安全的 Bitmap 获取函数，兼容新架构
 fun View.fetchImage(source: ReadableMap, callback: (BitmapDescriptor) -> Unit) {
-  val uri = ImageSource(context, source.getString("uri")).uri
+  val uriString = source.getString("uri")
+  if (uriString == null) {
+    // 处理空 URI 的情况
+    return
+  }
+
+  val uri = ImageSource(context, uriString).uri
   val request = ImageRequestBuilder.newBuilderWithSource(uri).let {
     it.postprocessor = object : BasePostprocessor() {
       override fun process(bitmap: Bitmap) {
@@ -111,4 +143,21 @@ fun View.fetchImage(source: ReadableMap, callback: (BitmapDescriptor) -> Unit) {
     it.build()
   }
   Fresco.getImagePipeline().fetchDecodedImage(request, this)
+}
+
+// 新架构辅助函数
+fun ReadableMap.getSafeDouble(key: String): Double? {
+  return if (hasKey(key) && !isNull(key)) getDouble(key) else null
+}
+
+fun ReadableMap.getSafeString(key: String): String? {
+  return if (hasKey(key) && !isNull(key)) getString(key) else null
+}
+
+fun ReadableMap.getSafeInt(key: String): Int? {
+  return if (hasKey(key) && !isNull(key)) getInt(key) else null
+}
+
+fun ReadableMap.getSafeBoolean(key: String): Boolean? {
+  return if (hasKey(key) && !isNull(key)) getBoolean(key) else null
 }

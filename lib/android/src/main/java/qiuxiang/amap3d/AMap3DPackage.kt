@@ -3,11 +3,14 @@ package qiuxiang.amap3d
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.config.ReactFeatureFlags
 import com.facebook.react.uimanager.ViewManager
 import qiuxiang.amap3d.map_view.*
 import qiuxiang.amap3d.modules.SdkModule
 
+@Suppress("unused")
 class AMap3DPackage : ReactPackage {
+
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
     return listOf(
       SdkModule(reactContext),
@@ -18,11 +21,6 @@ class AMap3DPackage : ReactPackage {
     return listOf(
       MapViewManager(),
       MarkerManager(),
-      PolylineManager(),
-      PolygonManager(),
-      CircleManager(),
-      HeatMapManager(),
-      MultiPointManager()
     )
   }
 }
