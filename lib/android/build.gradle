@@ -1,3 +1,6 @@
+// 添加插件声明
+apply plugin: 'com.android.library'
+
 android {
     compileSdkVersion 33
     buildToolsVersion "33.0.0"
@@ -5,6 +8,9 @@ android {
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 33
+        versionCode 1
+        versionName "1.0"
+
         // 启用新架构
         externalNativeBuild {
             ndkBuild {
@@ -19,6 +25,9 @@ android {
                 cppFlags "-std=c++17"
             }
         }
+
+        // 新架构配置
+        buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
     }
 
     // 启用新架构
@@ -27,13 +36,101 @@ android {
             path "src/main/jni/Android.mk"
         }
     }
+
+    // 编译选项
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    // 构建类型
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+
+    // 资源排除配置
+    packagingOptions {
+        exclude "META-INF/DEPENDENCIES"
+        exclude "**/libc++_shared.so"
+        exclude "**/libfbjni.so"
+        exclude "**/libjsi.so"
+        exclude "**/libfolly_runtime.so"
+        exclude "**/libglog.so"
+        exclude "**/libreactnativejni.so"
+    }
+
+    // 源代码集配置（新架构）
+    sourceSets {
+        main {
+            if (isNewArchitectureEnabled()) {
+                java.srcDirs += [
+                        "src/newarch",
+                        "$buildDir/generated/source/codegen/java"
+                ]
+            } else {
+                java.srcDirs += [
+                        "src/oldarch"
+                ]
+            }
+        }
+    }
+}
+
+// 新架构启用检测方法
+def isNewArchitectureEnabled() {
+    return project.hasProperty("newArchEnabled") && project.newArchEnabled == "true"
 }
 
 dependencies {
+    // React Native 依赖
     implementation "com.facebook.react:react-android:+"
+
+    // Hermes 引擎（可选）
     implementation "com.facebook.react:hermes-android:+"
 
+    // 高德地图 SDK
+    implementation 'com.amap.api:3dmap:10.0.0'
+    implementation 'com.amap.api:location:6.2.0'
+    implementation 'com.amap.api:search:9.5.0'
+
+    // Fresco 图片加载（如果使用图片相关功能）
+    implementation 'com.facebook.fresco:fresco:2.6.0'
+    implementation 'com.facebook.fresco:imagepipeline-okhttp3:2.6.0'
+
     // 新架构相关依赖
-    implementation "com.facebook.react:react-native:+"
-    implementation "com.facebook.fbreact:fabric:+" // 如果可用
+    if (isNewArchitectureEnabled()) {
+        implementation "com.facebook.react:fabric:+" // Fabric 渲染器
+        implementation project(':rncore') // React Native 核心模块
+    }
+}
+
+// 预构建任务（新架构）
+if (isNewArchitectureEnabled()) {
+    tasks.register('generateCodegenArtifactsFromSchema') {
+        doLast {
+            def nodeCommand = "node"
+            if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+                nodeCommand = "node.exe"
+            }
+
+            def command = [
+                    nodeCommand,
+                    "../node_modules/react-native/scripts/generate-codegen-artifacts.js",
+                    "-p", ".",
+                    "-o", "$buildDir/generated/source/codegen/java",
+                    "-e", "true",
+                    "--libraryName", "react-native-amap3d"
+            ]
+
+            command.execute(null, projectDir).waitForProcessOutput(System.out, System.err)
+        }
+    }
+
+    preBuild.dependsOn generateCodegenArtifactsFromSchema
 }
