@@ -1,5 +1,10 @@
-// 添加插件声明
+// 第一行必须声明插件
 apply plugin: 'com.android.library'
+
+// 在 android 块之前定义自定义方法
+def isNewArchitectureEnabled() {
+    return rootProject.hasProperty("newArchEnabled") && rootProject.newArchEnabled == "true"
+}
 
 android {
     compileSdkVersion 33
@@ -11,29 +16,33 @@ android {
         versionCode 1
         versionName "1.0"
 
-        // 启用新架构
-        externalNativeBuild {
-            ndkBuild {
-                arguments "APP_PLATFORM=android-21",
-                        "APP_STL=c++_shared",
-                        "NDK_TOOLCHAIN_VERSION=clang",
-                        "GENERATED_SRC_DIR=$buildDir/generated/source",
-                        "PROJECT_BUILD_DIR=$buildDir",
-                        "REACT_ANDROID_DIR=$rootDir/../node_modules/react-native/ReactAndroid",
-                        "REACT_ANDROID_BUILD_DIR=$rootDir/../node_modules/react-native/ReactAndroid/build"
-                cFlags "-Wall", "-Werror", "-fexceptions", "-frtti", "-DWITH_INSPECTOR=1"
-                cppFlags "-std=c++17"
+        // 新架构配置
+        buildConfigField("boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString())
+
+        // 启用新架构的 NDK 配置
+        if (isNewArchitectureEnabled()) {
+            externalNativeBuild {
+                ndkBuild {
+                    arguments "APP_PLATFORM=android-21",
+                            "APP_STL=c++_shared",
+                            "NDK_TOOLCHAIN_VERSION=clang",
+                            "GENERATED_SRC_DIR=$buildDir/generated/source",
+                            "PROJECT_BUILD_DIR=$buildDir",
+                            "REACT_ANDROID_DIR=$rootDir/../node_modules/react-native/ReactAndroid",
+                            "REACT_ANDROID_BUILD_DIR=$rootDir/../node_modules/react-native/ReactAndroid/build"
+                    cFlags "-Wall", "-Werror", "-fexceptions", "-frtti", "-DWITH_INSPECTOR=1"
+                    cppFlags "-std=c++17"
+                }
             }
         }
-
-        // 新架构配置
-        buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
     }
 
-    // 启用新架构
-    externalNativeBuild {
-        ndkBuild {
-            path "src/main/jni/Android.mk"
+    // 新架构的外部原生构建配置
+    if (isNewArchitectureEnabled()) {
+        externalNativeBuild {
+            ndkBuild {
+                path "src/main/jni/Android.mk"
+            }
         }
     }
 
@@ -45,12 +54,12 @@ android {
 
     // 构建类型
     buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
         debug {
             minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 
@@ -65,7 +74,7 @@ android {
         exclude "**/libreactnativejni.so"
     }
 
-    // 源代码集配置（新架构）
+    // 源代码集配置
     sourceSets {
         main {
             if (isNewArchitectureEnabled()) {
@@ -74,43 +83,42 @@ android {
                         "$buildDir/generated/source/codegen/java"
                 ]
             } else {
-                java.srcDirs += [
-                        "src/oldarch"
-                ]
+                java.srcDirs += ["src/oldarch"]
             }
         }
     }
+
+    //  lint 配置
+    lintOptions {
+        abortOnError false
+        checkReleaseBuilds false
+    }
 }
 
-// 新架构启用检测方法
-def isNewArchitectureEnabled() {
-    return project.hasProperty("newArchEnabled") && project.newArchEnabled == "true"
-}
-
+// 依赖配置
 dependencies {
     // React Native 依赖
     implementation "com.facebook.react:react-android:+"
 
-    // Hermes 引擎（可选）
+    // Hermes 引擎
     implementation "com.facebook.react:hermes-android:+"
 
-    // 高德地图 SDK
-    implementation 'com.amap.api:3dmap:10.0.0'
+    // 高德地图 SDK - 使用稳定版本
+    implementation 'com.amap.api:3dmap:10.0.600'
     implementation 'com.amap.api:location:6.2.0'
     implementation 'com.amap.api:search:9.5.0'
 
-    // Fresco 图片加载（如果使用图片相关功能）
+    // Fresco 图片加载
     implementation 'com.facebook.fresco:fresco:2.6.0'
-    implementation 'com.facebook.fresco:imagepipeline-okhttp3:2.6.0'
 
-    // 新架构相关依赖
+    // 新架构 Fabric 依赖
     if (isNewArchitectureEnabled()) {
-        implementation "com.facebook.react:fabric:+" // Fabric 渲染器
-        implementation project(':rncore') // React Native 核心模块
+        // 这些依赖通常由 React Native 自动提供
+        // implementation "com.facebook.react:fabricjni:0.72.0"
     }
 }
 
-// 预构建任务（新架构）
+// 新架构代码生成任务
 if (isNewArchitectureEnabled()) {
     tasks.register('generateCodegenArtifactsFromSchema') {
         doLast {
@@ -128,9 +136,24 @@ if (isNewArchitectureEnabled()) {
                     "--libraryName", "react-native-amap3d"
             ]
 
-            command.execute(null, projectDir).waitForProcessOutput(System.out, System.err)
+            def process = command.execute(null, projectDir)
+            process.waitForProcessOutput(System.out, System.err)
+            if (process.exitValue() != 0) {
+                throw new GradleException("Failed to generate codegen artifacts")
+            }
         }
     }
 
+    // 在预构建阶段运行代码生成
     preBuild.dependsOn generateCodegenArtifactsFromSchema
+}
+
+// 仓库配置
+repositories {
+    google()
+    mavenCentral()
+
+    // 高德地图仓库
+    maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+    maven { url 'https://maven.aliyun.com/repository/public/' }
 }
