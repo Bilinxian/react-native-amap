@@ -5,7 +5,7 @@
     "esModuleInterop": true,
     "baseUrl": ".",
     "paths": {
-      "react-native-amap3d": ["lib/src"]
+      "react-native-amap3d": ["src"]
     }
   }
 }
