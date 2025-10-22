@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "description": "AMap maps for React Native new architecture",
   "main": "src/index.ts",
-  "types": "src/index.ts",
+  "types": "src/index.d.ts",
   "react-native": "src/index.ts",
   "codegenConfig": {
     "name": "react-native-amap3d",
     "type": "modules",
     "jsSrcsDir": "./src",
     "android": {
-      "javaPackageName": "com.amaps"
+      "javaPackageName": "com.amaps.AmapMapsPackage"
     }
   },
   "files": [
