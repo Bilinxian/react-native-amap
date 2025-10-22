@@ -1,18 +1,7 @@
-import { NativeModules } from 'react-native';
+import NativeAmapMaps from './NativeAmapMaps';
 
-const { AmapMapsModule } = NativeModules;
-
-export const initSDK = (appKey) => {
-  return AmapMapsModule ? AmapMapsModule.initSDK(appKey) : Promise.resolve();
-};
-
-export const setLanguage = (language) => {
-  if (AmapMapsModule && AmapMapsModule.setLanguage) {
-    AmapMapsModule.setLanguage(language);
-  }
-};
+export const initSDK = NativeAmapMaps.initSDK;
 
 export default {
   initSDK,
-  setLanguage,
 };

@@ -1,7 +1,7 @@
 buildscript {
     ext {
         kotlinVersion = "1.8.22"
-        amapVersion = "9.6.0"
+        amapVersion = "latest-version"
     }
 }
 
